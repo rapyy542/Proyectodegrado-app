@@ -640,4 +640,4 @@ class _CompletionDialogState extends State<_CompletionDialog>
 }
 
 
-// error en pubsec-yaml por el http de la IA groqqq aahjhjawurbqobiuqooiqoi
+// ya se supone que el error de http esta solucionado, lo tenia que sacar de flutter :v 
