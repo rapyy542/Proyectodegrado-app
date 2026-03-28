@@ -638,3 +638,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
     );
   }
 }
+
+
+// error en pubsec-yaml por el http de la IA groqqq aahjhjawurbqobiuqooiqoi
