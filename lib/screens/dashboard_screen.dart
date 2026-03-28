@@ -42,7 +42,7 @@ class DashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '¡Hola, ${user.displayName?.split(' ').first ?? 'usuario'}! 👋',
+                '¡Hola, ${user.displayName?.split(' ').first ?? 'usuario'}! ',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
