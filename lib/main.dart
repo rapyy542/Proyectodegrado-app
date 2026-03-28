@@ -1,3 +1,4 @@
+import 'screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -99,9 +100,15 @@ class _MainShellState extends State<MainShell> {
     DashboardScreen(),
     GoalsScreen(),
     HistoryScreen(),
+    ChatScreen(),
   ];
 
-  final List<String> _titles = ['Inicio', 'Mis Metas', 'Historial'];
+  final List<String> _titles = [
+    'Inicio',
+    'Mis Metas',
+    'Historial',
+    'Asistente',
+  ];
 
   void _showProfileSheet(BuildContext context) {
     final user = AuthService().currentUser!;
@@ -305,6 +312,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: 'Historial',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Asistente',
           ),
         ],
       ),
