@@ -48,7 +48,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_userGoals.isEmpty) return '';
     final active = _userGoals.where((g) => !g.completed).toList();
     final completed = _userGoals.where((g) => g.completed).toList();
-
     String context = '';
     if (active.isNotEmpty) {
       context += 'Metas activas: ';
@@ -98,122 +97,6 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          // Header del asistente
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.green[100],
-                  radius: 20,
-                  child: const Text('💰', style: TextStyle(fontSize: 20)),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Fin',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      'Asistente financiero',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                // Sugerencias rápidas
-                IconButton(
-                  icon: const Icon(Icons.tips_and_updates_outlined),
-                  onPressed: _showQuickSuggestions,
-                  tooltip: 'Sugerencias',
-                ),
-              ],
-            ),
-          ),
-
-          // Mensajes
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _TypingIndicator();
-                }
-                return _MessageBubble(message: _messages[index]);
-              },
-            ),
-          ),
-
-          // Input
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Pregúntale algo a Fin...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                    textInputAction: TextInputAction.send,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _sendMessage,
-                  child: CircleAvatar(
-                    backgroundColor: Colors.green,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.send, color: Colors.white, size: 20),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showQuickSuggestions() {
@@ -269,18 +152,124 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.green[100],
+                radius: 20,
+                child: const Text('💰', style: TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Fin',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    'Asistente financiero',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.tips_and_updates_outlined),
+                onPressed: _showQuickSuggestions,
+                tooltip: 'Sugerencias',
+              ),
+            ],
+          ),
+        ),
+
+        // Mensajes
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: _messages.length + (_isLoading ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == _messages.length) return _TypingIndicator();
+              return _MessageBubble(message: _messages[index]);
+            },
+          ),
+        ),
+
+        // Input
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(top: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'Pregúntale algo a Fin...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
+                  textInputAction: TextInputAction.send,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: CircleAvatar(
+                  backgroundColor: Colors.green,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.send, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ChatMessage {
   final String text;
   final bool isUser;
-
   _ChatMessage({required this.text, required this.isUser});
 }
 
 class _MessageBubble extends StatelessWidget {
   final _ChatMessage message;
-
   const _MessageBubble({required this.message});
 
   @override

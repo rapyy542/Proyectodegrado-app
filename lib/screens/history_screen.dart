@@ -10,53 +10,50 @@ class HistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser!;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Historial')),
-      body: StreamBuilder<List<Goal>>(
-        stream: GoalService().goalsStream(user.uid),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return StreamBuilder<List<Goal>>(
+      stream: GoalService().goalsStream(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final completedGoals = (snapshot.data ?? [])
-              .where((g) => g.completed)
-              .toList();
+        final completedGoals = (snapshot.data ?? [])
+            .where((g) => g.completed)
+            .toList();
 
-          if (completedGoals.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.emoji_events_outlined,
-                    size: 72,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aún no has completado ninguna meta.',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '¡Sigue ahorrando, pronto aparecerán aquí!',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: completedGoals.length,
-            itemBuilder: (context, index) {
-              return _CompletedGoalCard(goal: completedGoals[index]);
-            },
+        if (completedGoals.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  size: 72,
+                  color: Colors.grey[300],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Aún no has completado ninguna meta.',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '¡Sigue ahorrando, pronto aparecerán aquí!',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                ),
+              ],
+            ),
           );
-        },
-      ),
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: completedGoals.length,
+          itemBuilder: (context, index) {
+            return _CompletedGoalCard(goal: completedGoals[index]);
+          },
+        );
+      },
     );
   }
 }

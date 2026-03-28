@@ -10,148 +10,139 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser!;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Inicio')),
-      body: StreamBuilder<List<Goal>>(
-        stream: GoalService().goalsStream(user.uid),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return StreamBuilder<List<Goal>>(
+      stream: GoalService().goalsStream(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final allGoals = snapshot.data ?? [];
-          final activeGoals = allGoals.where((g) => !g.completed).toList();
-          final completedGoals = allGoals.where((g) => g.completed).toList();
+        final allGoals = snapshot.data ?? [];
+        final activeGoals = allGoals.where((g) => !g.completed).toList();
+        final completedGoals = allGoals.where((g) => g.completed).toList();
+        final totalSaved = allGoals.fold<double>(
+          0,
+          (sum, g) => sum + g.savedAmount,
+        );
+        final totalTarget = activeGoals.fold<double>(
+          0,
+          (sum, g) => sum + g.targetAmount,
+        );
 
-          final totalSaved = allGoals.fold<double>(
-            0,
-            (sum, g) => sum + g.savedAmount,
+        Goal? closestGoal;
+        if (activeGoals.isNotEmpty) {
+          closestGoal = activeGoals.reduce(
+            (a, b) => a.progressPercent >= b.progressPercent ? a : b,
           );
-          final totalTarget = activeGoals.fold<double>(
-            0,
-            (sum, g) => sum + g.targetAmount,
-          );
+        }
 
-          // Meta más cercana a completarse
-          Goal? closestGoal;
-          if (activeGoals.isNotEmpty) {
-            closestGoal = activeGoals.reduce(
-              (a, b) => a.progressPercent >= b.progressPercent ? a : b,
-            );
-          }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¡Hola, ${user.displayName?.split(' ').first ?? 'usuario'}! 👋',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _getMotivationalMessage(activeGoals.length),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Saludo
-                Text(
-                  '¡Hola, ${user.displayName?.split(' ').first ?? 'usuario'}! 👋',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      icon: Icons.savings,
+                      label: 'Total ahorrado',
+                      value: '\$${totalSaved.toStringAsFixed(0)}',
+                      color: Colors.green,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _getMotivationalMessage(activeGoals.length),
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      icon: Icons.flag,
+                      label: 'Metas activas',
+                      value: '${activeGoals.length}',
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      icon: Icons.emoji_events,
+                      label: 'Metas cumplidas',
+                      value: '${completedGoals.length}',
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      icon: Icons.track_changes,
+                      label: 'Por alcanzar',
+                      value:
+                          '\$${(totalTarget - totalSaved).clamp(0, double.infinity).toStringAsFixed(0)}',
+                      color: Colors.purple,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
 
-                // Tarjetas de resumen
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SummaryCard(
-                        icon: Icons.savings,
-                        label: 'Total ahorrado',
-                        value: '\$${totalSaved.toStringAsFixed(0)}',
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SummaryCard(
-                        icon: Icons.flag,
-                        label: 'Metas activas',
-                        value: '${activeGoals.length}',
-                        color: Colors.blue,
-                      ),
-                    ),
-                  ],
+              if (closestGoal != null) ...[
+                const Text(
+                  'Meta más cercana',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SummaryCard(
-                        icon: Icons.emoji_events,
-                        label: 'Metas cumplidas',
-                        value: '${completedGoals.length}',
-                        color: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SummaryCard(
-                        icon: Icons.track_changes,
-                        label: 'Por alcanzar',
-                        value:
-                            '\$${(totalTarget - totalSaved).clamp(0, double.infinity).toStringAsFixed(0)}',
-                        color: Colors.purple,
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 10),
+                _ClosestGoalCard(goal: closestGoal),
                 const SizedBox(height: 28),
-
-                // Meta más cercana
-                if (closestGoal != null) ...[
-                  const Text(
-                    'Meta más cercana',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  _ClosestGoalCard(goal: closestGoal),
-                  const SizedBox(height: 28),
-                ],
-
-                // Resumen de metas activas
-                if (activeGoals.isNotEmpty) ...[
-                  const Text(
-                    'Resumen de metas',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  ...activeGoals.map((goal) => _MiniGoalRow(goal: goal)),
-                ],
-
-                if (activeGoals.isEmpty && completedGoals.isEmpty)
-                  Center(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 40),
-                        Icon(
-                          Icons.savings_outlined,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Aún no tienes metas.\n¡Crea tu primera meta!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey[500]),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
-            ),
-          );
-        },
-      ),
+
+              if (activeGoals.isNotEmpty) ...[
+                const Text(
+                  'Resumen de metas',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                ...activeGoals.map((goal) => _MiniGoalRow(goal: goal)),
+              ],
+
+              if (activeGoals.isEmpty && completedGoals.isEmpty)
+                Center(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
+                      Icon(
+                        Icons.savings_outlined,
+                        size: 64,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Aún no tienes metas.\n¡Crea tu primera meta!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -180,9 +171,9 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +235,7 @@ class _ClosestGoalCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
+                  color: Colors.white.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -260,7 +251,7 @@ class _ClosestGoalCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: goal.progressPercent / 100,
-            backgroundColor: Colors.white.withOpacity(0.3),
+            backgroundColor: Colors.white.withValues(alpha: 0.3),
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
@@ -269,7 +260,7 @@ class _ClosestGoalCard extends StatelessWidget {
           Text(
             '\$${goal.savedAmount.toStringAsFixed(0)} de \$${goal.targetAmount.toStringAsFixed(0)} · Para ${goal.estimatedDate}',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 13,
             ),
           ),
