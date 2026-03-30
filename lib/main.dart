@@ -1,7 +1,5 @@
-import 'screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/user_service.dart';
@@ -10,6 +8,8 @@ import 'models/goal_model.dart';
 import 'screens/create_goal_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
+import 'screens/chat_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,10 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Savings App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.theme,
       home: const AuthGate(),
     );
   }
@@ -60,26 +57,70 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.base,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Savings App',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.login),
-              label: const Text('Iniciar sesión con Google'),
-              onPressed: () async {
-                final credential = await AuthService().signInWithGoogle();
-                if (credential != null) {
-                  await UserService().createUserIfNotExists(credential.user!);
-                }
-              },
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.button,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(
+                  Icons.savings,
+                  color: AppColors.white,
+                  size: 44,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Savings App',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Alcanza tus metas financieras',
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: 0.7),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 56),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.login),
+                  label: const Text('Continuar con Google'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.button,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final credential = await AuthService().signInWithGoogle();
+                    if (credential != null) {
+                      await UserService().createUserIfNotExists(
+                        credential.user!,
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -116,146 +157,143 @@ class _MainShellState extends State<MainShell> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StreamBuilder<List<Goal>>(
-        stream: GoalService().goalsStream(user.uid),
-        builder: (context, snapshot) {
-          final allGoals = snapshot.data ?? [];
-          final completedGoals = allGoals.where((g) => g.completed).toList();
-          final totalSaved = allGoals.fold<double>(
-            0,
-            (sum, g) => sum + g.savedAmount,
-          );
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: StreamBuilder<List<Goal>>(
+          stream: GoalService().goalsStream(user.uid),
+          builder: (context, snapshot) {
+            final allGoals = snapshot.data ?? [];
+            final completedGoals = allGoals.where((g) => g.completed).toList();
+            final totalSaved = allGoals.fold<double>(
+              0,
+              (sum, g) => sum + g.savedAmount,
+            );
+            final createdAt = user.metadata.creationTime;
+            final months = [
+              'enero',
+              'febrero',
+              'marzo',
+              'abril',
+              'mayo',
+              'junio',
+              'julio',
+              'agosto',
+              'septiembre',
+              'octubre',
+              'noviembre',
+              'diciembre',
+            ];
+            final joinDate = createdAt != null
+                ? '${createdAt.day} de ${months[createdAt.month - 1]} de ${createdAt.year}'
+                : 'Desconocido';
 
-          // Fecha de creación del usuario
-          final createdAt = user.metadata.creationTime;
-          final months = [
-            'enero',
-            'febrero',
-            'marzo',
-            'abril',
-            'mayo',
-            'junio',
-            'julio',
-            'agosto',
-            'septiembre',
-            'octubre',
-            'noviembre',
-            'diciembre',
-          ];
-          final joinDate = createdAt != null
-              ? '${createdAt.day} de ${months[createdAt.month - 1]} de ${createdAt.year}'
-              : 'Desconocido';
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Foto y nombre
-                CircleAvatar(
-                  radius: 44,
-                  backgroundImage: user.photoURL != null
-                      ? NetworkImage(user.photoURL!)
-                      : null,
-                  backgroundColor: Colors.green[100],
-                  child: user.photoURL == null
-                      ? Text(
-                          user.displayName?.substring(0, 1).toUpperCase() ??
-                              'U',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  user.displayName ?? 'Usuario',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 24),
+                  CircleAvatar(
+                    radius: 44,
+                    backgroundImage: user.photoURL != null
+                        ? NetworkImage(user.photoURL!)
+                        : null,
+                    backgroundColor: AppColors.background,
+                    child: user.photoURL == null
+                        ? Text(
+                            user.displayName?.substring(0, 1).toUpperCase() ??
+                                'U',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : null,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.email ?? '',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Miembro desde $joinDate',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-                ),
-                const SizedBox(height: 24),
-
-                // Estadísticas
-                Row(
-                  children: [
-                    _ProfileStat(
-                      icon: Icons.savings,
-                      label: 'Total ahorrado',
-                      value: '\$${totalSaved.toStringAsFixed(0)}',
-                      color: Colors.green,
+                  const SizedBox(height: 12),
+                  Text(
+                    user.displayName ?? 'Usuario',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
                     ),
-                    const SizedBox(width: 12),
-                    _ProfileStat(
-                      icon: Icons.emoji_events,
-                      label: 'Metas cumplidas',
-                      value: '${completedGoals.length}',
-                      color: Colors.amber,
-                    ),
-                    const SizedBox(width: 12),
-                    _ProfileStat(
-                      icon: Icons.flag,
-                      label: 'Metas activas',
-                      value: '${allGoals.where((g) => !g.completed).length}',
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 28),
-
-                // Botón cerrar sesión
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text(
-                      'Cerrar sesión',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email ?? '',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Miembro desde $joinDate',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _ProfileStat(
+                        icon: Icons.savings,
+                        label: 'Total ahorrado',
+                        value: '\$${totalSaved.toStringAsFixed(0)}',
+                        color: AppColors.primary,
                       ),
-                    ),
-                    onPressed: () async {
-                      Navigator.pop(ctx);
-                      await AuthService().signOut();
-                    },
+                      const SizedBox(width: 12),
+                      _ProfileStat(
+                        icon: Icons.emoji_events,
+                        label: 'Metas cumplidas',
+                        value: '${completedGoals.length}',
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 12),
+                      _ProfileStat(
+                        icon: Icons.flag,
+                        label: 'Metas activas',
+                        value: '${allGoals.where((g) => !g.completed).length}',
+                        color: AppColors.button,
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout, color: Colors.red),
+                      label: const Text(
+                        'Cerrar sesión',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await AuthService().signOut();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -268,7 +306,6 @@ class _MainShellState extends State<MainShell> {
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
         actions: [
-          // Burbuja de perfil
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
@@ -278,13 +315,14 @@ class _MainShellState extends State<MainShell> {
                 backgroundImage: user.photoURL != null
                     ? NetworkImage(user.photoURL!)
                     : null,
-                backgroundColor: Colors.green[200],
+                backgroundColor: AppColors.button,
                 child: user.photoURL == null
                     ? Text(
                         user.displayName?.substring(0, 1).toUpperCase() ?? 'U',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.white,
                         ),
                       )
                     : null,
@@ -343,9 +381,9 @@ class _ProfileStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -389,11 +427,30 @@ class GoalsScreen extends StatelessWidget {
         final goals = (snapshot.data ?? []).where((g) => !g.completed).toList();
 
         if (goals.isEmpty) {
-          return const Center(
-            child: Text(
-              'No tienes metas activas.\n¡Crea una!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.flag_outlined,
+                  size: 72,
+                  color: AppColors.soft.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No tienes metas activas.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '¡Crea tu primera meta!',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+              ],
             ),
           );
         }
@@ -462,7 +519,6 @@ class _GoalCardState extends State<GoalCard> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -477,6 +533,7 @@ class _GoalCardState extends State<GoalCard> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
                     ),
                   ),
                 ),
@@ -486,7 +543,15 @@ class _GoalCardState extends State<GoalCard> {
                       ? Colors.red[100]
                       : goal.urgency == 'media'
                       ? Colors.orange[100]
-                      : Colors.green[100],
+                      : AppColors.background,
+                  labelStyle: TextStyle(
+                    color: goal.urgency == 'alta'
+                        ? Colors.red[700]
+                        : goal.urgency == 'media'
+                        ? Colors.orange[700]
+                        : AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -499,7 +564,10 @@ class _GoalCardState extends State<GoalCard> {
             const SizedBox(height: 8),
             Text(
               '\$${goal.savedAmount.toStringAsFixed(0)} de \$${goal.targetAmount.toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 6),
             LinearProgressIndicator(
@@ -510,7 +578,7 @@ class _GoalCardState extends State<GoalCard> {
             const SizedBox(height: 4),
             Text(
               '${progress.toStringAsFixed(0)}% completado',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
@@ -528,10 +596,17 @@ class _GoalCardState extends State<GoalCard> {
                   dense: true,
                   leading: Icon(
                     level.completed ? Icons.lock_open : Icons.lock,
-                    color: level.completed ? Colors.green : Colors.grey,
+                    color: level.completed ? AppColors.button : Colors.grey,
                     size: 20,
                   ),
-                  title: Text(level.motivationalName(goal.levels.length)),
+                  title: Text(
+                    level.motivationalName(goal.levels.length),
+                    style: TextStyle(
+                      color: level.completed
+                          ? AppColors.primary
+                          : Colors.grey[600],
+                    ),
+                  ),
                   subtitle: Text(
                     '\$${level.amountRequired.toStringAsFixed(0)} · ${level.completed ? '✅ Completado' : '🔒 Pendiente'}',
                   ),
@@ -594,7 +669,11 @@ class _CompletionDialogState extends State<_CompletionDialog>
               const SizedBox(height: 12),
               const Text(
                 '¡Meta completada!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -617,14 +696,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: widget.onAccept,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                   child: const Text(
                     '¡Genial! Cerrar',
                     style: TextStyle(fontSize: 16),
@@ -638,6 +709,3 @@ class _CompletionDialogState extends State<_CompletionDialog>
     );
   }
 }
-
-
-// ya se supone que el error de http esta solucionado, lo tenia que sacar de flutter :v 
