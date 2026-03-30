@@ -2,9 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/goal_service.dart';
 import '../models/goal_model.dart';
+import '../theme/app_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Buenos días';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  String _getMotivationalMessage(int activeCount, double totalSaved) {
+    if (activeCount == 0 && totalSaved == 0) {
+      return 'Comienza creando tu primera meta de ahorro 🚀';
+    }
+    if (totalSaved == 0)
+      return '¡Tienes $activeCount meta${activeCount > 1 ? 's' : ''} lista${activeCount > 1 ? 's' : ''}! Empieza a ahorrar hoy.';
+    if (activeCount == 0)
+      return '¡Increíble! Has completado todas tus metas 🏆';
+    final messages = [
+      'Cada peso cuenta. ¡Sigue así! 💪',
+      'La constancia es la clave del éxito financiero.',
+      'Pequeños pasos llevan a grandes logros. 🎯',
+      'Tu futuro yo te lo agradecerá. 🌟',
+      'Ahorrar hoy es libertad mañana. 💰',
+    ];
+    return messages[DateTime.now().day % messages.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,20 +67,43 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '¡Hola, ${user.displayName?.split(' ').first ?? 'usuario'}! ',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              // Saludo con hora
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.base, AppColors.primary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_getGreeting()}, ${user.displayName?.split(' ').first ?? 'usuario'} 👋',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _getMotivationalMessage(activeGoals.length, totalSaved),
+                      style: TextStyle(
+                        color: AppColors.white.withValues(alpha: 0.85),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                _getMotivationalMessage(activeGoals.length),
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
+              // Tarjetas de resumen
               Row(
                 children: [
                   Expanded(
@@ -62,7 +111,7 @@ class DashboardScreen extends StatelessWidget {
                       icon: Icons.savings,
                       label: 'Total ahorrado',
                       value: '\$${totalSaved.toStringAsFixed(0)}',
-                      color: Colors.green,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -71,7 +120,7 @@ class DashboardScreen extends StatelessWidget {
                       icon: Icons.flag,
                       label: 'Metas activas',
                       value: '${activeGoals.length}',
-                      color: Colors.blue,
+                      color: AppColors.button,
                     ),
                   ),
                 ],
@@ -84,7 +133,7 @@ class DashboardScreen extends StatelessWidget {
                       icon: Icons.emoji_events,
                       label: 'Metas cumplidas',
                       value: '${completedGoals.length}',
-                      color: Colors.orange,
+                      color: Colors.amber[700]!,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -94,33 +143,66 @@ class DashboardScreen extends StatelessWidget {
                       label: 'Por alcanzar',
                       value:
                           '\$${(totalTarget - totalSaved).clamp(0, double.infinity).toStringAsFixed(0)}',
-                      color: Colors.purple,
+                      color: AppColors.soft,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
+              // Meta más cercana
               if (closestGoal != null) ...[
-                const Text(
-                  'Meta más cercana',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    const Text(
+                      'Meta más cercana',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${closestGoal.levels.where((l) => !l.completed).length} niveles restantes',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 _ClosestGoalCard(goal: closestGoal),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
               ],
 
+              // Resumen de metas
               if (activeGoals.isNotEmpty) ...[
                 const Text(
                   'Resumen de metas',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ...activeGoals.map((goal) => _MiniGoalRow(goal: goal)),
               ],
 
-              if (activeGoals.isEmpty && completedGoals.isEmpty)
+              if (allGoals.isEmpty)
                 Center(
                   child: Column(
                     children: [
@@ -128,13 +210,21 @@ class DashboardScreen extends StatelessWidget {
                       Icon(
                         Icons.savings_outlined,
                         size: 64,
-                        color: Colors.grey[300],
+                        color: AppColors.soft.withValues(alpha: 0.4),
                       ),
                       const SizedBox(height: 12),
+                      const Text(
+                        'Aún no tienes metas.',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        'Aún no tienes metas.\n¡Crea tu primera meta!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[500]),
+                        '¡Crea tu primera meta de ahorro!',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
                       ),
                     ],
                   ),
@@ -144,12 +234,6 @@ class DashboardScreen extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _getMotivationalMessage(int activeCount) {
-    if (activeCount == 0) return 'Comienza creando tu primera meta de ahorro.';
-    if (activeCount == 1) return 'Tienes 1 meta activa. ¡Sigue adelante!';
-    return 'Tienes $activeCount metas activas. ¡Vas muy bien!';
   }
 }
 
@@ -206,8 +290,8 @@ class _ClosestGoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade400, Colors.green.shade600],
+        gradient: const LinearGradient(
+          colors: [AppColors.button, AppColors.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -223,7 +307,7 @@ class _ClosestGoalCard extends StatelessWidget {
                 child: Text(
                   goal.title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -235,13 +319,13 @@ class _ClosestGoalCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
+                  color: AppColors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${goal.progressPercent.toStringAsFixed(0)}%',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -251,18 +335,30 @@ class _ClosestGoalCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: goal.progressPercent / 100,
-            backgroundColor: Colors.white.withValues(alpha: 0.3),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            backgroundColor: AppColors.white.withValues(alpha: 0.3),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.white),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 8),
-          Text(
-            '\$${goal.savedAmount.toStringAsFixed(0)} de \$${goal.targetAmount.toStringAsFixed(0)} · Para ${goal.estimatedDate}',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 13,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '\$${goal.savedAmount.toStringAsFixed(0)} de \$${goal.targetAmount.toStringAsFixed(0)}',
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                'Para: ${goal.estimatedDate}',
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -287,7 +383,10 @@ class _MiniGoalRow extends StatelessWidget {
               children: [
                 Text(
                   goal.title,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkText,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(
@@ -301,7 +400,11 @@ class _MiniGoalRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             '${goal.progressPercent.toStringAsFixed(0)}%',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: AppColors.primary,
+            ),
           ),
         ],
       ),

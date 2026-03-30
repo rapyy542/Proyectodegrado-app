@@ -331,7 +331,17 @@ class _MainShellState extends State<MainShell> {
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeIn,
+        switchOutCurve: Curves.easeOut,
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _screens[_currentIndex],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
@@ -431,24 +441,42 @@ class GoalsScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.flag_outlined,
-                  size: 72,
-                  color: AppColors.soft.withValues(alpha: 0.5),
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: const BoxDecoration(
+                    color: AppColors.background,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.savings_outlined,
+                    size: 60,
+                    color: AppColors.button,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 const Text(
-                  'No tienes metas activas.',
+                  'Aun no tienes metas',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  '¡Crea tu primera meta!',
+                  'Crea tu primera meta y empieza\na construir tu futuro financiero.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Crear mi primera meta'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateGoalScreen()),
+                  ),
                 ),
               ],
             ),
@@ -608,7 +636,7 @@ class _GoalCardState extends State<GoalCard> {
                     ),
                   ),
                   subtitle: Text(
-                    '\$${level.amountRequired.toStringAsFixed(0)} · ${level.completed ? '✅ Completado' : '🔒 Pendiente'}',
+                    '\$${level.amountRequired.toStringAsFixed(0)} · ${level.completed ? 'Completado' : 'Pendiente'}',
                   ),
                 ),
               ),
@@ -665,10 +693,22 @@ class _CompletionDialogState extends State<_CompletionDialog>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🎉', style: TextStyle(fontSize: 64)),
-              const SizedBox(height: 12),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: AppColors.button,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
               const Text(
-                '¡Meta completada!',
+                'Meta completada',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -687,7 +727,7 @@ class _CompletionDialogState extends State<_CompletionDialog>
               ),
               const SizedBox(height: 8),
               Text(
-                '¡Lograste tu objetivo! Eso es disciplina real 💪',
+                'Lograste tu objetivo. Eso es disciplina real.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
@@ -696,10 +736,7 @@ class _CompletionDialogState extends State<_CompletionDialog>
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: widget.onAccept,
-                  child: const Text(
-                    '¡Genial! Cerrar',
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  child: const Text('Cerrar', style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],

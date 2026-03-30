@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/ai_service.dart';
 import '../services/goal_service.dart';
 import '../models/goal_model.dart';
+import '../theme/app_theme.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -18,7 +19,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final List<_ChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _showSuggestions = true;
   List<Goal> _userGoals = [];
+
+  final List<String> _suggestions = [
+    '¿Cómo puedo ahorrar más? 💡',
+    '¿Qué es la regla 50/30/20? 📊',
+    'Analiza mis metas 🎯',
+    '¿Técnicas para ahorrar? 💰',
+    '¿Cómo evitar gastos? 🛑',
+  ];
 
   @override
   void initState() {
@@ -64,14 +74,15 @@ class _ChatScreenState extends State<ChatScreen> {
     return context;
   }
 
-  Future<void> _sendMessage() async {
-    final text = _controller.text.trim();
+  Future<void> _sendMessage([String? predefined]) async {
+    final text = predefined ?? _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
     _controller.clear();
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isLoading = true;
+      _showSuggestions = false;
     });
     _scrollToBottom();
 
@@ -99,53 +110,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _showQuickSuggestions() {
-    final suggestions = [
-      '¿Cómo puedo ahorrar más dinero cada mes?',
-      '¿Qué es la regla 50/30/20?',
-      'Analiza mis metas de ahorro',
-      '¿Qué técnica de ahorro me recomiendas?',
-      '¿Cómo evitar gastos innecesarios?',
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Sugerencias rápidas',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ...suggestions.map(
-              (s) => ListTile(
-                dense: true,
-                leading: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: Colors.green,
-                ),
-                title: Text(s, style: const TextStyle(fontSize: 14)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _controller.text = s;
-                  _sendMessage();
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -161,13 +125,15 @@ class _ChatScreenState extends State<ChatScreen> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            color: AppColors.white,
+            border: Border(
+              bottom: BorderSide(color: AppColors.soft.withValues(alpha: 0.3)),
+            ),
           ),
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: Colors.green[100],
+                backgroundColor: AppColors.background,
                 radius: 20,
                 child: const Text('💰', style: TextStyle(fontSize: 20)),
               ),
@@ -177,7 +143,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   const Text(
                     'Fin',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.darkText,
+                    ),
                   ),
                   Text(
                     'Asistente financiero',
@@ -186,10 +156,36 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.tips_and_updates_outlined),
-                onPressed: _showQuickSuggestions,
-                tooltip: 'Sugerencias',
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'En línea',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -199,7 +195,7 @@ class _ChatScreenState extends State<ChatScreen> {
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             itemCount: _messages.length + (_isLoading ? 1 : 0),
             itemBuilder: (context, index) {
               if (index == _messages.length) return _TypingIndicator();
@@ -208,12 +204,64 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
 
+        // Chips de sugerencias
+        if (_showSuggestions)
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sugerencias rápidas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: _suggestions.map((s) {
+                    return GestureDetector(
+                      onTap: () => _sendMessage(s),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.soft.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          s,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+
         // Input
         Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            color: AppColors.white,
+            border: Border(
+              top: BorderSide(color: AppColors.soft.withValues(alpha: 0.3)),
+            ),
           ),
           child: Row(
             children: [
@@ -227,7 +275,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: AppColors.background.withValues(alpha: 0.5),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -239,19 +287,23 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _sendMessage,
+                onTap: () => _sendMessage(),
                 child: CircleAvatar(
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.button,
                   child: _isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.white,
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.send, color: Colors.white, size: 20),
+                      : const Icon(
+                          Icons.send,
+                          color: AppColors.white,
+                          size: 20,
+                        ),
                 ),
               ),
             ],
@@ -283,18 +335,28 @@ class _MessageBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: message.isUser ? Colors.green : Colors.grey[100],
+          color: message.isUser ? AppColors.button : AppColors.white,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(message.isUser ? 16 : 4),
             bottomRight: Radius.circular(message.isUser ? 4 : 16),
           ),
+          border: message.isUser
+              ? null
+              : Border.all(color: AppColors.soft.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Text(
           message.text,
           style: TextStyle(
-            color: message.isUser ? Colors.white : Colors.black87,
+            color: message.isUser ? AppColors.white : AppColors.darkText,
             fontSize: 14,
             height: 1.4,
           ),
@@ -338,14 +400,15 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.soft.withValues(alpha: 0.3)),
         ),
         child: FadeTransition(
           opacity: _animation,
           child: const Text(
             'Fin está escribiendo...',
-            style: TextStyle(color: Colors.grey, fontSize: 13),
+            style: TextStyle(color: AppColors.soft, fontSize: 13),
           ),
         ),
       ),
