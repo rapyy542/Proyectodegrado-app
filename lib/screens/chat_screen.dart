@@ -23,11 +23,11 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Goal> _userGoals = [];
 
   final List<String> _suggestions = [
-    '¿Cómo puedo ahorrar más? 💡',
-    '¿Qué es la regla 50/30/20? 📊',
-    'Analiza mis metas 🎯',
-    '¿Técnicas para ahorrar? 💰',
-    '¿Cómo evitar gastos? 🛑',
+    '¿Cómo puedo ahorrar más? ',
+    '¿Qué es la regla 50/30/20? ',
+    'Analiza mis metas ',
+    '¿Técnicas para ahorrar? ',
+    '¿Cómo evitar gastos? ',
   ];
 
   @override
@@ -48,7 +48,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _messages.add(
       _ChatMessage(
         text:
-            '¡Hola! Soy Fin, tu asistente financiero 👋\n\nPuedo ayudarte con consejos de ahorro, explicarte técnicas financieras o analizar tus metas. ¿En qué te ayudo hoy?',
+            '¡Hola! Soy Fin, tu asistente financiero \n\nPuedo ayudarte con consejos de ahorro, explicarte técnicas financieras o analizar tus metas. ¿En qué te ayudo hoy?',
         isUser: false,
       ),
     );
