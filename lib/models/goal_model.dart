@@ -16,12 +16,12 @@ class Level {
   // Nombre motivacional según el progreso
   String motivationalName(int totalLevels) {
     final progress = number / totalLevels;
-    if (number == 1) return 'Primer paso 🌱';
-    if (number == totalLevels) return 'Recta final 🏁';
-    if (progress <= 0.25) return 'Arrancando 💪';
-    if (progress <= 0.50) return 'Tomando ritmo 🔥';
-    if (progress <= 0.75) return 'A mitad de camino ⚡';
-    return 'Casi listo 🚀';
+    if (number == 1) return 'Primer paso ';
+    if (number == totalLevels) return 'Recta final !!!';
+    if (progress <= 0.25) return 'Arrancando ';
+    if (progress <= 0.50) return 'Tomando ritmo, nice';
+    if (progress <= 0.75) return 'A mitad de camino !!';
+    return ' Ya Casi';
   }
 
   Map<String, dynamic> toMap() => {

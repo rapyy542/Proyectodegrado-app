@@ -16,18 +16,17 @@ class DashboardScreen extends StatelessWidget {
 
   String _getMotivationalMessage(int activeCount, double totalSaved) {
     if (activeCount == 0 && totalSaved == 0) {
-      return 'Comienza creando tu primera meta de ahorro 🚀';
+      return 'Comienza creando tu primera meta de ahorro ';
     }
     if (totalSaved == 0)
       return '¡Tienes $activeCount meta${activeCount > 1 ? 's' : ''} lista${activeCount > 1 ? 's' : ''}! Empieza a ahorrar hoy.';
-    if (activeCount == 0)
-      return '¡Increíble! Has completado todas tus metas 🏆';
+    if (activeCount == 0) return '¡Increíble! Has completado todas tus metas ';
     final messages = [
-      'Cada peso cuenta. ¡Sigue así! 💪',
+      'Cada peso cuenta. ¡Sigue así! ',
       'La constancia es la clave del éxito financiero.',
-      'Pequeños pasos llevan a grandes logros. 🎯',
-      'Tu futuro yo te lo agradecerá. 🌟',
-      'Ahorrar hoy es libertad mañana. 💰',
+      'Pequeños pasos llevan a grandes logros. ',
+      'Tu futuro yo te lo agradecerá. ',
+      'Ahorrar hoy es libertad mañana. ',
     ];
     return messages[DateTime.now().day % messages.length];
   }
@@ -83,7 +82,7 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_getGreeting()}, ${user.displayName?.split(' ').first ?? 'usuario'} 👋',
+                      '${_getGreeting()}, ${user.displayName?.split(' ').first ?? 'usuario'} ',
                       style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 22,
