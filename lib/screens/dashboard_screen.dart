@@ -4,8 +4,16 @@ import '../services/goal_service.dart';
 import '../models/goal_model.dart';
 import '../theme/app_theme.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  // OPTIMIZACIÓN: una sola instancia para todo el widget
+  final _goalService = GoalService();
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -21,9 +29,10 @@ class DashboardScreen extends StatelessWidget {
     if (totalSaved == 0) {
       return '¡Tienes $activeCount meta${activeCount > 1 ? 's' : ''} lista${activeCount > 1 ? 's' : ''}! Empieza a ahorrar hoy.';
     }
-    if (activeCount == 0)
+    if (activeCount == 0) {
       return '¡Increíble! Has completado todas tus metas 🏆';
-    final messages = [
+    }
+    const messages = [
       'Cada peso cuenta. ¡Sigue así! 💪',
       'La constancia es la clave del éxito financiero.',
       'Pequeños pasos llevan a grandes logros. 🌟',
@@ -38,7 +47,7 @@ class DashboardScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser!;
 
     return StreamBuilder<List<Goal>>(
-      stream: GoalService().goalsStream(user.uid),
+      stream: _goalService.goalsStream(user.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -82,7 +91,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // ── Tarjetas de resumen (con contadores animados) ──
+              // ── Tarjetas de resumen ──
               _FadeSlideIn(
                 delay: 80,
                 child: Row(
@@ -94,7 +103,10 @@ class DashboardScreen extends StatelessWidget {
                         value: totalSaved,
                         prefix: '\$',
                         color: AppColors.primary,
-                        gradientColors: [AppColors.primary, AppColors.button],
+                        gradientColors: const [
+                          AppColors.primary,
+                          AppColors.button
+                        ],
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -105,7 +117,10 @@ class DashboardScreen extends StatelessWidget {
                         value: activeGoals.length.toDouble(),
                         prefix: '',
                         color: AppColors.button,
-                        gradientColors: [AppColors.button, AppColors.soft],
+                        gradientColors: const [
+                          AppColors.button,
+                          AppColors.soft
+                        ],
                       ),
                     ),
                   ],
@@ -123,7 +138,7 @@ class DashboardScreen extends StatelessWidget {
                         value: completedGoals.length.toDouble(),
                         prefix: '',
                         color: Colors.amber[700]!,
-                        gradientColors: [Colors.amber, Colors.orange],
+                        gradientColors: const [Colors.amber, Colors.orange],
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -131,13 +146,14 @@ class DashboardScreen extends StatelessWidget {
                       child: _SummaryCard(
                         icon: Icons.track_changes_rounded,
                         label: 'Por alcanzar',
-                        value: (totalTarget - totalSaved).clamp(
-                          0,
-                          double.infinity,
-                        ),
+                        value: (totalTarget - totalSaved)
+                            .clamp(0, double.infinity),
                         prefix: '\$',
                         color: AppColors.soft,
-                        gradientColors: [AppColors.soft, AppColors.accent],
+                        gradientColors: const [
+                          AppColors.soft,
+                          AppColors.accent
+                        ],
                       ),
                     ),
                   ],
@@ -192,7 +208,11 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 _FadeSlideIn(
                   delay: 300,
-                  child: _ClosestGoalCard(goal: closestGoal),
+                  // OPTIMIZACIÓN: RepaintBoundary en la card destacada que
+                  // tiene su propia animación de barra de progreso
+                  child: RepaintBoundary(
+                    child: _ClosestGoalCard(goal: closestGoal),
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -212,11 +232,15 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 ...activeGoals.asMap().entries.map(
-                  (e) => _FadeSlideIn(
-                    delay: 400 + e.key * 60,
-                    child: _MiniGoalRow(goal: e.value),
-                  ),
-                ),
+                      (e) => _FadeSlideIn(
+                        delay: 400 + e.key * 60,
+                        // OPTIMIZACIÓN: cada fila tiene su propia barra animada,
+                        // RepaintBoundary evita que al animar una se repinten todas
+                        child: RepaintBoundary(
+                          child: _MiniGoalRow(goal: e.value),
+                        ),
+                      ),
+                    ),
               ],
 
               // ── Estado vacío ──
@@ -281,7 +305,7 @@ class DashboardScreen extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _FadeSlideIn extends StatefulWidget {
   final Widget child;
-  final int delay; // milisegundos de retraso
+  final int delay;
 
   const _FadeSlideIn({required this.child, required this.delay});
 
@@ -476,7 +500,6 @@ class _SummaryCardState extends State<_SummaryCard>
               child: Icon(widget.icon, color: AppColors.white, size: 20),
             ),
             const SizedBox(height: 10),
-            // Contador animado
             AnimatedBuilder(
               animation: _countAnim,
               builder: (_, __) => Text(
@@ -574,10 +597,8 @@ class _ClosestGoalCardState extends State<_ClosestGoalCard>
               AnimatedBuilder(
                 animation: _progressAnim,
                 builder: (_, __) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -602,9 +623,8 @@ class _ClosestGoalCardState extends State<_ClosestGoalCard>
               builder: (_, __) => LinearProgressIndicator(
                 value: _progressAnim.value,
                 backgroundColor: AppColors.white.withValues(alpha: 0.25),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.accent,
-                ),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.accent),
                 minHeight: 10,
               ),
             ),
@@ -678,8 +698,8 @@ class _MiniGoalRowState extends State<_MiniGoalRow>
     final barColor = progress >= 75
         ? Colors.green
         : progress >= 40
-        ? AppColors.button
-        : AppColors.soft;
+            ? AppColors.button
+            : AppColors.soft;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),

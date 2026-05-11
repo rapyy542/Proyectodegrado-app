@@ -105,7 +105,6 @@ class _LoginPageState extends State<LoginPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icono con gradiente
                   Container(
                     width: 90,
                     height: 90,
@@ -151,7 +150,6 @@ class _LoginPageState extends State<LoginPage>
                     ),
                   ),
                   const SizedBox(height: 56),
-                  // ── "Para iniciar:" con flecha ──
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -193,8 +191,8 @@ class _LoginPageState extends State<LoginPage>
                         ),
                       ),
                       onPressed: () async {
-                        final credential = await AuthService()
-                            .signInWithGoogle();
+                        final credential =
+                            await AuthService().signInWithGoogle();
                         if (credential != null) {
                           await UserService().createUserIfNotExists(
                             credential.user!,
@@ -226,12 +224,22 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    GoalsScreen(),
-    HistoryScreen(),
-    ChatScreen(),
-  ];
+  // OPTIMIZACIÓN: pantallas lazy — se construyen solo cuando se visitan,
+  // no todas al arrancar la app.
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 0:
+        return const DashboardScreen();
+      case 1:
+        return const GoalsScreen();
+      case 2:
+        return const HistoryScreen();
+      case 3:
+        return const ChatScreen();
+      default:
+        return const DashboardScreen();
+    }
+  }
 
   final List<String> _titles = [
     'Inicio',
@@ -242,6 +250,8 @@ class _MainShellState extends State<MainShell> {
 
   void _showProfileSheet(BuildContext context) {
     final user = AuthService().currentUser!;
+    // OPTIMIZACIÓN: una sola instancia de GoalService para el sheet
+    final goalService = GoalService();
 
     showModalBottomSheet(
       context: context,
@@ -253,7 +263,7 @@ class _MainShellState extends State<MainShell> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: StreamBuilder<List<Goal>>(
-          stream: GoalService().goalsStream(user.uid),
+          stream: goalService.goalsStream(user.uid),
           builder: (context, snapshot) {
             final allGoals = snapshot.data ?? [];
             final completedGoals = allGoals.where((g) => g.completed).toList();
@@ -262,7 +272,7 @@ class _MainShellState extends State<MainShell> {
               (sum, g) => sum + g.savedAmount,
             );
             final createdAt = user.metadata.creationTime;
-            final months = [
+            const months = [
               'enero',
               'febrero',
               'marzo',
@@ -285,7 +295,6 @@ class _MainShellState extends State<MainShell> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Handle bar
                   Container(
                     width: 40,
                     height: 4,
@@ -295,11 +304,10 @@ class _MainShellState extends State<MainShell> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Avatar con borde gradiente
                   Container(
                     padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
                         colors: [AppColors.button, AppColors.accent],
                       ),
                       shape: BoxShape.circle,
@@ -412,8 +420,8 @@ class _MainShellState extends State<MainShell> {
               onTap: () => _showProfileSheet(context),
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     colors: [AppColors.button, AppColors.accent],
                   ),
                   shape: BoxShape.circle,
@@ -441,7 +449,6 @@ class _MainShellState extends State<MainShell> {
           ),
         ],
       ),
-      // ── Transición entre pantallas: slide + fade ──
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 350),
         switchInCurve: Curves.easeOutCubic,
@@ -456,9 +463,10 @@ class _MainShellState extends State<MainShell> {
             child: SlideTransition(position: slide, child: child),
           );
         },
+        // OPTIMIZACIÓN: lazy build — solo construye la pantalla activa
         child: KeyedSubtree(
           key: ValueKey(_currentIndex),
-          child: _screens[_currentIndex],
+          child: _buildScreen(_currentIndex),
         ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -545,8 +553,16 @@ class _ProfileStat extends StatelessWidget {
 // ─────────────────────────────────────────────
 // GOALS SCREEN
 // ─────────────────────────────────────────────
-class GoalsScreen extends StatelessWidget {
+class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
+
+  @override
+  State<GoalsScreen> createState() => _GoalsScreenState();
+}
+
+class _GoalsScreenState extends State<GoalsScreen> {
+  // OPTIMIZACIÓN: una sola instancia, no una nueva en cada rebuild
+  final _goalService = GoalService();
 
   void _goToCreate(BuildContext context) {
     Navigator.push(
@@ -561,7 +577,6 @@ class GoalsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
-      // ── Botón flotante "Nueva Meta" ──
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _goToCreate(context),
         backgroundColor: AppColors.button,
@@ -577,15 +592,14 @@ class GoalsScreen extends StatelessWidget {
         ),
       ),
       body: StreamBuilder<List<Goal>>(
-        stream: GoalService().goalsStream(user.uid),
+        stream: _goalService.goalsStream(user.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final goals = (snapshot.data ?? [])
-              .where((g) => !g.completed)
-              .toList();
+          final goals =
+              (snapshot.data ?? []).where((g) => !g.completed).toList();
 
           if (goals.isEmpty) {
             return Center(
@@ -633,8 +647,19 @@ class GoalsScreen extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             itemCount: goals.length,
+            // OPTIMIZACIÓN: evita reconstruir items que ya están fuera de pantalla
+            addAutomaticKeepAlives: false,
             itemBuilder: (context, index) {
-              return GoalCard(goal: goals[index], uid: user.uid, index: index);
+              // OPTIMIZACIÓN: RepaintBoundary aísla cada card para que cuando
+              // una se anime no fuerce a redibujar a sus vecinas
+              return RepaintBoundary(
+                child: GoalCard(
+                  goal: goals[index],
+                  uid: user.uid,
+                  index: index,
+                  goalService: _goalService,
+                ),
+              );
             },
           );
         },
@@ -650,12 +675,15 @@ class GoalCard extends StatefulWidget {
   final Goal goal;
   final String uid;
   final int index;
+  // OPTIMIZACIÓN: recibe la instancia en vez de crear una nueva
+  final GoalService goalService;
 
   const GoalCard({
     super.key,
     required this.goal,
     required this.uid,
     required this.index,
+    required this.goalService,
   });
 
   @override
@@ -669,7 +697,7 @@ class _GoalCardState extends State<GoalCard> {
     final nextIndex = widget.goal.levels.indexWhere((l) => !l.completed);
     if (nextIndex == -1) return;
 
-    await GoalService().completeNextLevel(
+    await widget.goalService.completeNextLevel(
       widget.uid,
       widget.goal.id,
       widget.goal,
@@ -691,7 +719,7 @@ class _GoalCardState extends State<GoalCard> {
         goalTitle: widget.goal.title,
         onAccept: () async {
           Navigator.of(ctx).pop();
-          await GoalService().archiveGoal(widget.uid, widget.goal.id);
+          await widget.goalService.archiveGoal(widget.uid, widget.goal.id);
         },
       ),
     );
@@ -702,7 +730,6 @@ class _GoalCardState extends State<GoalCard> {
     final goal = widget.goal;
     final progress = goal.progressPercent;
 
-    // Animación de entrada escalonada según el índice de la tarjeta
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: 400 + (widget.index * 80)),
@@ -728,7 +755,6 @@ class _GoalCardState extends State<GoalCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Título y chip de urgencia
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -747,14 +773,14 @@ class _GoalCardState extends State<GoalCard> {
                       backgroundColor: goal.urgency == 'alta'
                           ? Colors.red[100]
                           : goal.urgency == 'media'
-                          ? Colors.orange[100]
-                          : AppColors.background,
+                              ? Colors.orange[100]
+                              : AppColors.background,
                       labelStyle: TextStyle(
                         color: goal.urgency == 'alta'
                             ? Colors.red[700]
                             : goal.urgency == 'media'
-                            ? Colors.orange[700]
-                            : AppColors.primary,
+                                ? Colors.orange[700]
+                                : AppColors.primary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -766,7 +792,6 @@ class _GoalCardState extends State<GoalCard> {
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 const SizedBox(height: 10),
-                // Montos
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -785,7 +810,6 @@ class _GoalCardState extends State<GoalCard> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Barra de progreso con gradiente
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: TweenAnimationBuilder<double>(
@@ -800,8 +824,8 @@ class _GoalCardState extends State<GoalCard> {
                         progress >= 75
                             ? Colors.green
                             : progress >= 40
-                            ? AppColors.button
-                            : AppColors.soft,
+                                ? AppColors.button
+                                : AppColors.soft,
                       ),
                     ),
                   ),
@@ -812,13 +836,11 @@ class _GoalCardState extends State<GoalCard> {
                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 14),
-                // Botón animado
                 _AnimatedButton(
                   label: 'Completar nivel ${goal.currentLevel + 1}',
                   onPressed: _handleCompleteLevel,
                 ),
                 const SizedBox(height: 12),
-                // ── Vista de niveles compacta ──
                 _LevelsCompactView(
                   goal: goal,
                   expanded: _expanded,
@@ -835,7 +857,6 @@ class _GoalCardState extends State<GoalCard> {
 
 // ─────────────────────────────────────────────
 // VISTA COMPACTA DE NIVELES
-// Muestra: segmentos de batería + 5 niveles cercanos + scroll horizontal
 // ─────────────────────────────────────────────
 class _LevelsCompactView extends StatelessWidget {
   final Goal goal;
@@ -855,20 +876,16 @@ class _LevelsCompactView extends StatelessWidget {
     final completedCount = levels.where((l) => l.completed).length;
     final currentIndex = levels.indexWhere((l) => !l.completed);
 
-    // ── Niveles visibles: 2 antes + actual + 2 después ──
     final List<int> visibleIndices = [];
-    for (
-      int i = (currentIndex - 2).clamp(0, total - 1);
-      i <= (currentIndex + 2).clamp(0, total - 1);
-      i++
-    ) {
+    for (int i = (currentIndex - 2).clamp(0, total - 1);
+        i <= (currentIndex + 2).clamp(0, total - 1);
+        i++) {
       visibleIndices.add(i);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Encabezado con contador ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -893,10 +910,8 @@ class _LevelsCompactView extends StatelessWidget {
             GestureDetector(
               onTap: onToggle,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.button.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
@@ -929,12 +944,8 @@ class _LevelsCompactView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-
-        // ── Barra de segmentos tipo batería ──
         _SegmentBar(total: total, completed: completedCount),
         const SizedBox(height: 10),
-
-        // ── Niveles cercanos (scroll horizontal) ──
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -944,6 +955,8 @@ class _LevelsCompactView extends StatelessWidget {
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: visibleIndices.length,
+                    // OPTIMIZACIÓN: los chips de nivel son estáticos, no necesitan keepAlive
+                    addAutomaticKeepAlives: false,
                     itemBuilder: (context, i) {
                       final idx = visibleIndices[i];
                       final level = levels[idx];
@@ -973,12 +986,9 @@ class _SegmentBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Máximo 20 segmentos visibles para no saturar
     final segments = total.clamp(1, 20);
-    final completedSegments = ((completed / total) * segments).round().clamp(
-      0,
-      segments,
-    );
+    final completedSegments =
+        ((completed / total) * segments).round().clamp(0, segments);
 
     return Row(
       children: List.generate(segments, (i) {
@@ -994,8 +1004,8 @@ class _SegmentBar extends StatelessWidget {
               color: isDone
                   ? AppColors.button
                   : isCurrent
-                  ? AppColors.button.withValues(alpha: 0.35)
-                  : Colors.grey.shade200,
+                      ? AppColors.button.withValues(alpha: 0.35)
+                      : Colors.grey.shade200,
               boxShadow: isDone
                   ? [
                       BoxShadow(
@@ -1038,7 +1048,7 @@ class _LevelChip extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         gradient: isCurrent
-            ? LinearGradient(
+            ? const LinearGradient(
                 colors: [AppColors.button, AppColors.primary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -1047,15 +1057,15 @@ class _LevelChip extends StatelessWidget {
         color: isCurrent
             ? null
             : isDone
-            ? Colors.green.shade50
-            : Colors.grey.shade100,
+                ? Colors.green.shade50
+                : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isCurrent
               ? Colors.transparent
               : isDone
-              ? Colors.green.shade200
-              : Colors.grey.shade200,
+                  ? Colors.green.shade200
+                  : Colors.grey.shade200,
           width: 1.5,
         ),
         boxShadow: isCurrent
@@ -1078,14 +1088,14 @@ class _LevelChip extends StatelessWidget {
                 isDone
                     ? Icons.check_circle_rounded
                     : isCurrent
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
                 size: 14,
                 color: isCurrent
                     ? AppColors.white
                     : isDone
-                    ? Colors.green.shade600
-                    : Colors.grey.shade400,
+                        ? Colors.green.shade600
+                        : Colors.grey.shade400,
               ),
               const SizedBox(width: 4),
               Text(
@@ -1096,8 +1106,8 @@ class _LevelChip extends StatelessWidget {
                   color: isCurrent
                       ? AppColors.white
                       : isDone
-                      ? Colors.green.shade700
-                      : Colors.grey.shade500,
+                          ? Colors.green.shade700
+                          : Colors.grey.shade500,
                 ),
               ),
             ],
@@ -1111,8 +1121,8 @@ class _LevelChip extends StatelessWidget {
               color: isCurrent
                   ? AppColors.white
                   : isDone
-                  ? Colors.green.shade800
-                  : Colors.grey.shade600,
+                      ? Colors.green.shade800
+                      : Colors.grey.shade600,
             ),
           ),
           if (isCurrent)
@@ -1130,7 +1140,8 @@ class _LevelChip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// BOTÓN ANIMADO (efecto de escala al presionar)
+// BOTÓN ANIMADO — usa AnimatedScale nativo en vez
+// de AnimationController manual (más liviano)
 // ─────────────────────────────────────────────
 class _AnimatedButton extends StatefulWidget {
   final String label;
@@ -1142,39 +1153,24 @@ class _AnimatedButton extends StatefulWidget {
   State<_AnimatedButton> createState() => _AnimatedButtonState();
 }
 
-class _AnimatedButtonState extends State<_AnimatedButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-      lowerBound: 0.93,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _AnimatedButtonState extends State<_AnimatedButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _controller.reverse(),
+      onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
-        _controller.forward();
+        setState(() => _pressed = false);
         widget.onPressed();
       },
-      onTapCancel: () => _controller.forward(),
-      child: ScaleTransition(
-        scale: _controller,
+      onTapCancel: () => setState(() => _pressed = false),
+      // OPTIMIZACIÓN: AnimatedScale es más liviano que AnimationController
+      // manual con ScaleTransition — hace exactamente lo mismo pero sin
+      // necesitar un Ticker/vsync propio
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 100),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12),
