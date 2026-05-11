@@ -135,20 +135,44 @@ class _LoginPageState extends State<LoginPage>
                     'Savings App',
                     style: TextStyle(
                       color: AppColors.white,
-                      fontSize: 34,
+                      fontSize: 42,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
-                    'Alcanza tus metas financieras',
+                    'Alcanza tus metas financieras,\nsin complicaciones.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.white.withValues(alpha: 0.7),
-                      fontSize: 15,
+                      color: AppColors.white.withValues(alpha: 0.75),
+                      fontSize: 18,
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 56),
+                  // ── "Para iniciar:" con flecha ──
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Para iniciar:',
+                        style: TextStyle(
+                          color: AppColors.white.withValues(alpha: 0.5),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_downward_rounded,
+                        color: AppColors.white.withValues(alpha: 0.4),
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -157,12 +181,16 @@ class _LoginPageState extends State<LoginPage>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.button,
                         foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                         shadowColor: AppColors.button.withValues(alpha: 0.4),
                         elevation: 8,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       onPressed: () async {
                         final credential = await AuthService()

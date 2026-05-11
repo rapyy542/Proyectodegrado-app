@@ -78,8 +78,6 @@ class DashboardScreen extends StatelessWidget {
                     activeGoals.length,
                     totalSaved,
                   ),
-                  totalSaved: totalSaved,
-                  totalTarget: totalTarget,
                 ),
               ),
               const SizedBox(height: 20),
@@ -331,54 +329,18 @@ class _FadeSlideInState extends State<_FadeSlideIn>
 }
 
 // ─────────────────────────────────────────────
-// TARJETA DE SALUDO con barra de progreso global
+// TARJETA DE SALUDO
 // ─────────────────────────────────────────────
-class _GreetingCard extends StatefulWidget {
+class _GreetingCard extends StatelessWidget {
   final String greeting;
   final String firstName;
   final String message;
-  final double totalSaved;
-  final double totalTarget;
 
   const _GreetingCard({
     required this.greeting,
     required this.firstName,
     required this.message,
-    required this.totalSaved,
-    required this.totalTarget,
   });
-
-  @override
-  State<_GreetingCard> createState() => _GreetingCardState();
-}
-
-class _GreetingCardState extends State<_GreetingCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _progressAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    final target = widget.totalTarget > 0
-        ? (widget.totalSaved / widget.totalTarget).clamp(0.0, 1.0)
-        : 0.0;
-    _progressAnim = Tween<double>(
-      begin: 0,
-      end: target,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +366,7 @@ class _GreetingCardState extends State<_GreetingCard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${widget.greeting}, ${widget.firstName} 👋',
+            '$greeting, $firstName 👋',
             style: const TextStyle(
               color: AppColors.white,
               fontSize: 22,
@@ -413,54 +375,12 @@ class _GreetingCardState extends State<_GreetingCard>
           ),
           const SizedBox(height: 6),
           Text(
-            widget.message,
+            message,
             style: TextStyle(
               color: AppColors.white.withValues(alpha: 0.85),
               fontSize: 14,
             ),
           ),
-          if (widget.totalTarget > 0) ...[
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Progreso global',
-                  style: TextStyle(
-                    color: AppColors.white.withValues(alpha: 0.7),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _progressAnim,
-                  builder: (_, __) => Text(
-                    '${(_progressAnim.value * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: AnimatedBuilder(
-                animation: _progressAnim,
-                builder: (_, __) => LinearProgressIndicator(
-                  value: _progressAnim.value,
-                  minHeight: 8,
-                  backgroundColor: AppColors.white.withValues(alpha: 0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.accent,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
