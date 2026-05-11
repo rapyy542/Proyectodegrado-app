@@ -132,7 +132,7 @@ class _LoginPageState extends State<LoginPage>
                   ),
                   const SizedBox(height: 28),
                   const Text(
-                    'Savings App',
+                    'SALD0',
                     style: TextStyle(
                       color: AppColors.white,
                       fontSize: 42,
