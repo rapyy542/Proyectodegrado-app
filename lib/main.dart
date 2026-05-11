@@ -520,79 +520,97 @@ class _ProfileStat extends StatelessWidget {
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
 
+  void _goToCreate(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CreateGoalScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = AuthService().currentUser!;
 
-    return StreamBuilder<List<Goal>>(
-      stream: GoalService().goalsStream(user.uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F8FF),
+      // ── Botón flotante "Nueva Meta" ──
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _goToCreate(context),
+        backgroundColor: AppColors.button,
+        elevation: 4,
+        icon: const Icon(Icons.add_rounded, color: AppColors.white),
+        label: const Text(
+          'Nueva Meta',
+          style: TextStyle(
+            color: AppColors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+      ),
+      body: StreamBuilder<List<Goal>>(
+        stream: GoalService().goalsStream(user.uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        final goals = (snapshot.data ?? []).where((g) => !g.completed).toList();
+          final goals = (snapshot.data ?? [])
+              .where((g) => !g.completed)
+              .toList();
 
-        if (goals.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.button.withValues(alpha: 0.15),
-                        AppColors.accent.withValues(alpha: 0.15),
-                      ],
+          if (goals.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.button.withValues(alpha: 0.15),
+                          AppColors.accent.withValues(alpha: 0.15),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
                     ),
-                    shape: BoxShape.circle,
+                    child: const Icon(
+                      Icons.savings_outlined,
+                      size: 60,
+                      color: AppColors.button,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.savings_outlined,
-                    size: 60,
-                    color: AppColors.button,
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Aún no tienes metas',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Aun no tienes metas',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Toca el botón de abajo para\ncrear tu primera meta de ahorro.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Crea tu primera meta y empieza\na construir tu futuro financiero.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                ),
-                const SizedBox(height: 28),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Crear mi primera meta'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CreateGoalScreen()),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+                ],
+              ),
+            );
+          }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: goals.length,
-          itemBuilder: (context, index) {
-            return GoalCard(goal: goals[index], uid: user.uid, index: index);
-          },
-        );
-      },
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            itemCount: goals.length,
+            itemBuilder: (context, index) {
+              return GoalCard(goal: goals[index], uid: user.uid, index: index);
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -771,54 +789,313 @@ class _GoalCardState extends State<GoalCard> {
                   label: 'Completar nivel ${goal.currentLevel + 1}',
                   onPressed: _handleCompleteLevel,
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _expanded = !_expanded),
-                  child: Text(_expanded ? 'Ocultar niveles' : 'Ver niveles'),
-                ),
-                // Niveles expandibles con animación
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  child: _expanded
-                      ? Column(
-                          children: goal.levels
-                              .map(
-                                (level) => ListTile(
-                                  dense: true,
-                                  leading: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: Icon(
-                                      level.completed
-                                          ? Icons.lock_open
-                                          : Icons.lock,
-                                      key: ValueKey(level.completed),
-                                      color: level.completed
-                                          ? AppColors.button
-                                          : Colors.grey,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    level.motivationalName(goal.levels.length),
-                                    style: TextStyle(
-                                      color: level.completed
-                                          ? AppColors.primary
-                                          : Colors.grey[600],
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '\$${level.amountRequired.toStringAsFixed(0)} · ${level.completed ? 'Completado' : 'Pendiente'}',
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        )
-                      : const SizedBox.shrink(),
+                const SizedBox(height: 12),
+                // ── Vista de niveles compacta ──
+                _LevelsCompactView(
+                  goal: goal,
+                  expanded: _expanded,
+                  onToggle: () => setState(() => _expanded = !_expanded),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// VISTA COMPACTA DE NIVELES
+// Muestra: segmentos de batería + 5 niveles cercanos + scroll horizontal
+// ─────────────────────────────────────────────
+class _LevelsCompactView extends StatelessWidget {
+  final Goal goal;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  const _LevelsCompactView({
+    required this.goal,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final levels = goal.levels;
+    final total = levels.length;
+    final completedCount = levels.where((l) => l.completed).length;
+    final currentIndex = levels.indexWhere((l) => !l.completed);
+
+    // ── Niveles visibles: 2 antes + actual + 2 después ──
+    final List<int> visibleIndices = [];
+    for (
+      int i = (currentIndex - 2).clamp(0, total - 1);
+      i <= (currentIndex + 2).clamp(0, total - 1);
+      i++
+    ) {
+      visibleIndices.add(i);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Encabezado con contador ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.layers_rounded,
+                  size: 14,
+                  color: AppColors.button.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '$completedCount de $total niveles',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: onToggle,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.button.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.button.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      expanded ? 'Ocultar' : 'Ver niveles',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.button,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      expanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 14,
+                      color: AppColors.button,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // ── Barra de segmentos tipo batería ──
+        _SegmentBar(total: total, completed: completedCount),
+        const SizedBox(height: 10),
+
+        // ── Niveles cercanos (scroll horizontal) ──
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: expanded
+              ? SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: visibleIndices.length,
+                    itemBuilder: (context, i) {
+                      final idx = visibleIndices[i];
+                      final level = levels[idx];
+                      final isCurrent = idx == currentIndex;
+                      return _LevelChip(
+                        level: level,
+                        levelNumber: idx + 1,
+                        isCurrent: isCurrent,
+                        totalLevels: total,
+                      );
+                    },
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Barra de segmentos estilo batería ──
+class _SegmentBar extends StatelessWidget {
+  final int total;
+  final int completed;
+
+  const _SegmentBar({required this.total, required this.completed});
+
+  @override
+  Widget build(BuildContext context) {
+    // Máximo 20 segmentos visibles para no saturar
+    final segments = total.clamp(1, 20);
+    final completedSegments = ((completed / total) * segments).round().clamp(
+      0,
+      segments,
+    );
+
+    return Row(
+      children: List.generate(segments, (i) {
+        final isDone = i < completedSegments;
+        final isCurrent = i == completedSegments;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+            height: 10,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              color: isDone
+                  ? AppColors.button
+                  : isCurrent
+                  ? AppColors.button.withValues(alpha: 0.35)
+                  : Colors.grey.shade200,
+              boxShadow: isDone
+                  ? [
+                      BoxShadow(
+                        color: AppColors.button.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ── Chip individual de nivel ──
+class _LevelChip extends StatelessWidget {
+  final dynamic level;
+  final int levelNumber;
+  final bool isCurrent;
+  final int totalLevels;
+
+  const _LevelChip({
+    required this.level,
+    required this.levelNumber,
+    required this.isCurrent,
+    required this.totalLevels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = level.completed;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: isCurrent ? 110 : 90,
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        gradient: isCurrent
+            ? LinearGradient(
+                colors: [AppColors.button, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isCurrent
+            ? null
+            : isDone
+            ? Colors.green.shade50
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isCurrent
+              ? Colors.transparent
+              : isDone
+              ? Colors.green.shade200
+              : Colors.grey.shade200,
+          width: 1.5,
+        ),
+        boxShadow: isCurrent
+            ? [
+                BoxShadow(
+                  color: AppColors.button.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isDone
+                    ? Icons.check_circle_rounded
+                    : isCurrent
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 14,
+                color: isCurrent
+                    ? AppColors.white
+                    : isDone
+                    ? Colors.green.shade600
+                    : Colors.grey.shade400,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Niv. $levelNumber',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isCurrent
+                      ? AppColors.white
+                      : isDone
+                      ? Colors.green.shade700
+                      : Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '\$${level.amountRequired.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isCurrent
+                  ? AppColors.white
+                  : isDone
+                  ? Colors.green.shade800
+                  : Colors.grey.shade600,
+            ),
+          ),
+          if (isCurrent)
+            Text(
+              'Actual',
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.white.withValues(alpha: 0.8),
+              ),
+            ),
+        ],
       ),
     );
   }
