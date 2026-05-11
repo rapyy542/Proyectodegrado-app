@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId = "com.example.my_app"
         // minSdk 21 es el mínimo requerido por firebase_auth y google_sign_in
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
