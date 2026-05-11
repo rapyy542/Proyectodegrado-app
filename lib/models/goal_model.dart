@@ -16,12 +16,12 @@ class Level {
   // Nombre motivacional según el progreso
   String motivationalName(int totalLevels) {
     final progress = number / totalLevels;
-    if (number == 1) return 'Primer paso ';
+    if (number == 1) return 'Primer paso 🚀';
     if (number == totalLevels) return 'Recta final !!!';
-    if (progress <= 0.25) return 'Arrancando ';
+    if (progress <= 0.25) return 'Arrancando 💪';
     if (progress <= 0.50) return 'Tomando ritmo, nice';
     if (progress <= 0.75) return 'A mitad de camino !!';
-    return ' Ya Casi';
+    return 'Ya Casi 🏁';
   }
 
   Map<String, dynamic> toMap() => {
@@ -34,9 +34,10 @@ class Level {
   };
 
   factory Level.fromMap(Map<String, dynamic> map) => Level(
-    number: map['number'],
-    amountRequired: (map['amountRequired'] as num).toDouble(),
+    number: (map['number'] as num?)?.toInt() ?? 0,
+    amountRequired: (map['amountRequired'] as num?)?.toDouble() ?? 0.0,
     completed: map['completed'] ?? false,
+    // CORREGIDO: null-check antes de castear a Timestamp
     completedAt: map['completedAt'] != null
         ? (map['completedAt'] as Timestamp).toDate()
         : null,
@@ -86,16 +87,20 @@ class Goal {
     return Goal(
       id: doc.id,
       title: data['title'] ?? '',
-      targetAmount: (data['targetAmount'] as num).toDouble(),
-      savedAmount: (data['savedAmount'] as num? ?? 0).toDouble(),
-      savingCapacity: (data['savingCapacity'] as num).toDouble(),
+      targetAmount: (data['targetAmount'] as num?)?.toDouble() ?? 0.0,
+      savedAmount: (data['savedAmount'] as num?)?.toDouble() ?? 0.0,
+      savingCapacity: (data['savingCapacity'] as num?)?.toDouble() ?? 0.0,
       period: data['period'] ?? 'semanal',
       urgency: data['urgency'] ?? 'media',
       estimatedDate: data['estimatedDate'] ?? '',
-      periodsNeeded: data['periodsNeeded'] ?? 0,
+      periodsNeeded: (data['periodsNeeded'] as num?)?.toInt() ?? 0,
       levels: levelsList,
       completed: data['completed'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      // CORREGIDO: si createdAt llega null (ej. justo después del add()),
+      // usamos DateTime.now() como fallback en vez de crashear
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

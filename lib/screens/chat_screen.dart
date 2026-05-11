@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/ai_service.dart';
@@ -22,6 +23,9 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showSuggestions = true;
   List<Goal> _userGoals = [];
 
+  // CORREGIDO: guardamos la suscripción para cancelarla en dispose()
+  StreamSubscription<List<Goal>>? _goalsSub;
+
   final List<Map<String, dynamic>> _suggestions = [
     {'text': '¿Cómo puedo ahorrar más?', 'icon': Icons.trending_up},
     {'text': '¿Qué es la regla 50/30/20?', 'icon': Icons.pie_chart},
@@ -37,10 +41,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _addWelcomeMessage();
   }
 
-  Future<void> _loadGoals() async {
+  void _loadGoals() {
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    GoalService().goalsStream(uid).listen((goals) {
-      setState(() => _userGoals = goals);
+    // CORREGIDO: cancelamos la suscripción anterior si existe y guardamos la nueva
+    _goalsSub?.cancel();
+    _goalsSub = GoalService().goalsStream(uid).listen((goals) {
+      if (mounted) {
+        setState(() => _userGoals = goals);
+      }
     });
   }
 
@@ -91,11 +99,13 @@ class _ChatScreenState extends State<ChatScreen> {
       goalsContext: _buildGoalsContext(),
     );
 
-    setState(() {
-      _messages.add(_ChatMessage(text: reply, isUser: false));
-      _isLoading = false;
-    });
-    _scrollToBottom();
+    if (mounted) {
+      setState(() {
+        _messages.add(_ChatMessage(text: reply, isUser: false));
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -112,6 +122,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    // CORREGIDO: cancelamos la suscripción al stream para evitar memory leak
+    _goalsSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -122,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Column(
       children: [
         // ── Header ──
-        _ChatHeader(),
+        const _ChatHeader(),
 
         // ── Mensajes ──
         Expanded(
@@ -183,7 +195,6 @@ class _ChatHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar con brillo animado
           Container(
             width: 44,
             height: 44,
@@ -225,7 +236,6 @@ class _ChatHeader extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          // Indicador "En línea"
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -329,7 +339,6 @@ class _MessageBubbleState extends State<_MessageBubble>
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
               decoration: BoxDecoration(
-                // Usuario: gradiente azul. Fin: blanco con borde suave
                 gradient: isUser
                     ? const LinearGradient(
                         colors: [AppColors.primary, AppColors.button],
@@ -536,7 +545,6 @@ class _ChatInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Botón de enviar con gradiente
           GestureDetector(
             onTap: onSend,
             child: AnimatedContainer(
@@ -614,7 +622,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       duration: const Duration(milliseconds: 1200),
     )..repeat();
 
-    // 3 puntos con delay entre ellos
     _dotAnimations = List.generate(3, (i) {
       return Tween<double>(begin: 0, end: 1).animate(
         CurvedAnimation(
