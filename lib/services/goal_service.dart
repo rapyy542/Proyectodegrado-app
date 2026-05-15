@@ -90,10 +90,41 @@ class GoalService {
         .collection('goals')
         .doc(goalId)
         .update({
-          'levels': updatedLevels,
-          'savedAmount': newSaved,
-          'completed': isCompleted,
-        });
+      'levels': updatedLevels,
+      'savedAmount': newSaved,
+      'completed': isCompleted,
+    });
+  }
+
+  Future<void> revertLastLevel(String uid, String goalId, Goal goal) async {
+    final lastCompleted = goal.levels.lastIndexWhere((l) => l.completed);
+    if (lastCompleted == -1) return;
+
+    final updatedLevels = goal.levels.asMap().entries.map((e) {
+      if (e.key == lastCompleted) {
+        return {
+          'number': e.value.number,
+          'amountRequired': e.value.amountRequired,
+          'completed': false,
+          'completedAt': null,
+        };
+      }
+      return e.value.toMap();
+    }).toList();
+
+    final newSaved =
+        goal.savedAmount - goal.levels[lastCompleted].amountRequired;
+
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('goals')
+        .doc(goalId)
+        .update({
+      'levels': updatedLevels,
+      'savedAmount': newSaved.clamp(0, goal.targetAmount),
+      'completed': false,
+    });
   }
 
   Future<void> deleteGoal(String uid, String goalId) async {
@@ -113,8 +144,8 @@ class GoalService {
         .collection('goals')
         .doc(goalId)
         .update({
-          'completed': true,
-          'archivedAt': FieldValue.serverTimestamp(),
-        });
+      'completed': true,
+      'archivedAt': FieldValue.serverTimestamp(),
+    });
   }
 }
