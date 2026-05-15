@@ -226,12 +226,22 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    GoalsScreen(),
-    HistoryScreen(),
-    ChatScreen(),
-  ];
+  // OPTIMIZACIÓN: las pantallas se construyen lazy (solo cuando se visitan).
+  // Antes todas se creaban al arrancar la app aunque no se vieran.
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 0:
+        return const DashboardScreen();
+      case 1:
+        return const GoalsScreen();
+      case 2:
+        return const HistoryScreen();
+      case 3:
+        return const ChatScreen();
+      default:
+        return const DashboardScreen();
+    }
+  }
 
   final List<String> _titles = [
     'Inicio',
@@ -242,6 +252,8 @@ class _MainShellState extends State<MainShell> {
 
   void _showProfileSheet(BuildContext context) {
     final user = AuthService().currentUser!;
+    // OPTIMIZACIÓN: una sola instancia de GoalService, no una nueva en cada rebuild
+    final goalService = GoalService();
 
     showModalBottomSheet(
       context: context,
@@ -253,7 +265,7 @@ class _MainShellState extends State<MainShell> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: StreamBuilder<List<Goal>>(
-          stream: GoalService().goalsStream(user.uid),
+          stream: goalService.goalsStream(user.uid),
           builder: (context, snapshot) {
             final allGoals = snapshot.data ?? [];
             final completedGoals = allGoals.where((g) => g.completed).toList();
@@ -298,8 +310,8 @@ class _MainShellState extends State<MainShell> {
                   // Avatar con borde gradiente
                   Container(
                     padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
                         colors: [AppColors.button, AppColors.accent],
                       ),
                       shape: BoxShape.circle,
@@ -412,8 +424,8 @@ class _MainShellState extends State<MainShell> {
               onTap: () => _showProfileSheet(context),
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     colors: [AppColors.button, AppColors.accent],
                   ),
                   shape: BoxShape.circle,
@@ -456,9 +468,11 @@ class _MainShellState extends State<MainShell> {
             child: SlideTransition(position: slide, child: child),
           );
         },
+        // OPTIMIZACIÓN: KeyedSubtree fuerza a AnimatedSwitcher a tratar
+        // cada pantalla como widget único, evitando redibujos innecesarios
         child: KeyedSubtree(
           key: ValueKey(_currentIndex),
-          child: _screens[_currentIndex],
+          child: _buildScreen(_currentIndex),
         ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -545,8 +559,16 @@ class _ProfileStat extends StatelessWidget {
 // ─────────────────────────────────────────────
 // GOALS SCREEN
 // ─────────────────────────────────────────────
-class GoalsScreen extends StatelessWidget {
+class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
+
+  @override
+  State<GoalsScreen> createState() => _GoalsScreenState();
+}
+
+class _GoalsScreenState extends State<GoalsScreen> {
+  // OPTIMIZACIÓN: instancia única, no una nueva en cada rebuild del StreamBuilder
+  final _goalService = GoalService();
 
   void _goToCreate(BuildContext context) {
     Navigator.push(
@@ -577,7 +599,7 @@ class GoalsScreen extends StatelessWidget {
         ),
       ),
       body: StreamBuilder<List<Goal>>(
-        stream: GoalService().goalsStream(user.uid),
+        stream: _goalService.goalsStream(user.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -637,8 +659,19 @@ class GoalsScreen extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             itemCount: goals.length,
+            // OPTIMIZACIÓN: evita mantener vivos widgets fuera de pantalla
+            addAutomaticKeepAlives: false,
             itemBuilder: (context, index) {
-              return GoalCard(goal: goals[index], uid: user.uid, index: index);
+              // OPTIMIZACIÓN: RepaintBoundary aísla cada card para que cuando
+              // una se anime no fuerce a redibujar a las demás
+              return RepaintBoundary(
+                child: GoalCard(
+                  goal: goals[index],
+                  uid: user.uid,
+                  index: index,
+                  goalService: _goalService,
+                ),
+              );
             },
           );
         },
@@ -654,12 +687,15 @@ class GoalCard extends StatefulWidget {
   final Goal goal;
   final String uid;
   final int index;
+  // OPTIMIZACIÓN: recibe la instancia en vez de crear GoalService() aquí dentro
+  final GoalService goalService;
 
   const GoalCard({
     super.key,
     required this.goal,
     required this.uid,
     required this.index,
+    required this.goalService,
   });
 
   @override
@@ -673,7 +709,7 @@ class _GoalCardState extends State<GoalCard> {
     final nextIndex = widget.goal.levels.indexWhere((l) => !l.completed);
     if (nextIndex == -1) return;
 
-    await GoalService().completeNextLevel(
+    await widget.goalService.completeNextLevel(
       widget.uid,
       widget.goal.id,
       widget.goal,
@@ -709,7 +745,6 @@ class _GoalCardState extends State<GoalCard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Icono ──
               Container(
                 width: 64,
                 height: 64,
@@ -737,7 +772,6 @@ class _GoalCardState extends State<GoalCard> {
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(height: 14),
-              // ── Frase inspiradora ──
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -767,10 +801,8 @@ class _GoalCardState extends State<GoalCard> {
                 ),
               ),
               const SizedBox(height: 20),
-              // ── Botones ──
               Row(
                 children: [
-                  // X / No
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.close, size: 16),
@@ -787,7 +819,6 @@ class _GoalCardState extends State<GoalCard> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Sí, retroceder
                   Expanded(
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.undo_rounded, size: 16),
@@ -803,7 +834,7 @@ class _GoalCardState extends State<GoalCard> {
                       ),
                       onPressed: () async {
                         Navigator.of(ctx).pop();
-                        await GoalService().revertLastLevel(
+                        await widget.goalService.revertLastLevel(
                           widget.uid,
                           widget.goal.id,
                           widget.goal,
@@ -828,7 +859,7 @@ class _GoalCardState extends State<GoalCard> {
         goalTitle: widget.goal.title,
         onAccept: () async {
           Navigator.of(ctx).pop();
-          await GoalService().archiveGoal(widget.uid, widget.goal.id);
+          await widget.goalService.archiveGoal(widget.uid, widget.goal.id);
         },
       ),
     );
@@ -869,7 +900,6 @@ class _GoalCardState extends State<GoalCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Título y chip de urgencia
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -907,7 +937,6 @@ class _GoalCardState extends State<GoalCard> {
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 const SizedBox(height: 10),
-                // Montos
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -926,7 +955,6 @@ class _GoalCardState extends State<GoalCard> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Barra de progreso con gradiente
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: TweenAnimationBuilder<double>(
@@ -953,12 +981,10 @@ class _GoalCardState extends State<GoalCard> {
                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 14),
-                // Botón animado
                 _AnimatedButton(
                   label: 'Completar nivel ${goal.currentLevel + 1}',
                   onPressed: _handleCompleteLevel,
                 ),
-                // Botón retroceder nivel (solo visible si hay niveles completados)
                 if (goal.levels.any((l) => l.completed)) ...[
                   const SizedBox(height: 8),
                   GestureDetector(
@@ -982,7 +1008,6 @@ class _GoalCardState extends State<GoalCard> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                // ── Vista de niveles compacta ──
                 _LevelsCompactView(
                   goal: goal,
                   expanded: _expanded,
@@ -999,7 +1024,6 @@ class _GoalCardState extends State<GoalCard> {
 
 // ─────────────────────────────────────────────
 // VISTA COMPACTA DE NIVELES
-// Muestra: segmentos de batería + 5 niveles cercanos + scroll horizontal
 // ─────────────────────────────────────────────
 class _LevelsCompactView extends StatelessWidget {
   final Goal goal;
@@ -1019,7 +1043,6 @@ class _LevelsCompactView extends StatelessWidget {
     final completedCount = levels.where((l) => l.completed).length;
     final currentIndex = levels.indexWhere((l) => !l.completed);
 
-    // ── Niveles visibles: 2 antes + actual + 2 después ──
     final List<int> visibleIndices = [];
     for (int i = (currentIndex - 2).clamp(0, total - 1);
         i <= (currentIndex + 2).clamp(0, total - 1);
@@ -1030,7 +1053,6 @@ class _LevelsCompactView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Encabezado con contador ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1085,15 +1107,8 @@ class _LevelsCompactView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-
-        // ── Barra de segmentos tipo batería ──
-        _SegmentBar(
-          total: total,
-          completed: completedCount,
-        ),
+        _SegmentBar(total: total, completed: completedCount),
         const SizedBox(height: 10),
-
-        // ── Niveles cercanos (scroll horizontal) ──
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -1103,6 +1118,7 @@ class _LevelsCompactView extends StatelessWidget {
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: visibleIndices.length,
+                    addAutomaticKeepAlives: false,
                     itemBuilder: (context, i) {
                       final idx = visibleIndices[i];
                       final level = levels[idx];
@@ -1123,7 +1139,6 @@ class _LevelsCompactView extends StatelessWidget {
   }
 }
 
-// ── Barra de segmentos estilo batería ──
 class _SegmentBar extends StatelessWidget {
   final int total;
   final int completed;
@@ -1132,7 +1147,6 @@ class _SegmentBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Máximo 20 segmentos visibles para no saturar
     final segments = total.clamp(1, 20);
     final completedSegments =
         ((completed / total) * segments).round().clamp(0, segments);
@@ -1170,7 +1184,6 @@ class _SegmentBar extends StatelessWidget {
   }
 }
 
-// ── Chip individual de nivel ──
 class _LevelChip extends StatelessWidget {
   final dynamic level;
   final int levelNumber;
@@ -1195,7 +1208,7 @@ class _LevelChip extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         gradient: isCurrent
-            ? LinearGradient(
+            ? const LinearGradient(
                 colors: [AppColors.button, AppColors.primary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -1287,7 +1300,7 @@ class _LevelChip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// BOTÓN ANIMADO (efecto de escala al presionar)
+// BOTÓN ANIMADO
 // ─────────────────────────────────────────────
 class _AnimatedButton extends StatefulWidget {
   final String label;
