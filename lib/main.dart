@@ -709,18 +709,214 @@ class _GoalCardState extends State<GoalCard> {
     final nextIndex = widget.goal.levels.indexWhere((l) => !l.completed);
     if (nextIndex == -1) return;
 
+    final level = widget.goal.levels[nextIndex];
+    final confirmed = await _showSavingsConfirmDialog(
+      levelNumber: nextIndex + 1,
+      expectedAmount: level.amountRequired,
+    );
+    if (!confirmed || !mounted) return;
+
     await widget.goalService.completeNextLevel(
       widget.uid,
       widget.goal.id,
       widget.goal,
     );
 
-    final newSaved =
-        widget.goal.savedAmount + widget.goal.levels[nextIndex].amountRequired;
-
+    final newSaved = widget.goal.savedAmount + level.amountRequired;
     if (newSaved >= widget.goal.targetAmount && mounted) {
       _showCompletionDialog();
     }
+  }
+
+  Future<bool> _showSavingsConfirmDialog({
+    required int levelNumber,
+    required double expectedAmount,
+  }) async {
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Encabezado ──
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: Colors.green.shade200, width: 2),
+                      ),
+                      child: Icon(Icons.savings_rounded,
+                          color: Colors.green.shade600, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nivel $levelNumber completado',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          Text(
+                            'Confirma tu ahorro de \$${expectedAmount.toStringAsFixed(0)}',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Campo monto ──
+                Text(
+                  '¿Cuánto ahorraste?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Ej: ${expectedAmount.toStringAsFixed(0)}',
+                    prefixText: '\$ ',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F8FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                          color: AppColors.button.withValues(alpha: 0.5),
+                          width: 1.5),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Ingresa el monto';
+                    final amount = double.tryParse(v);
+                    if (amount == null || amount <= 0) return 'Monto inválido';
+                    if (amount < expectedAmount * 0.9) {
+                      return 'El monto es menor al requerido (\$${expectedAmount.toStringAsFixed(0)})';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // ── Campo nota ──
+                Text(
+                  'Nota de evidencia (opcional)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: noteController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'Ej: Transferí al banco el martes...',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F8FF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                          color: AppColors.button.withValues(alpha: 0.5),
+                          width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Botones ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.close, size: 16),
+                        label: const Text('Cancelar'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check_rounded, size: 16),
+                        label: const Text('Confirmar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            Navigator.of(ctx).pop(true);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return result ?? false;
   }
 
   void _showRevertDialog() {
